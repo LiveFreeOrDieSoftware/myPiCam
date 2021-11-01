@@ -1,5 +1,5 @@
 
-
+import shutil
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
 import json
@@ -32,6 +32,16 @@ def get_cpu_temp():
         f.close()
         # print(f'The CPU temp in C is: {C}')
         return C
+
+def get_disk_usage():
+    values = {}
+    BytesPerGB = 1024 * 1024 * 1024
+    (total, used, free) = shutil.disk_usage("/")
+    values["disk-total"] = ("%.2f" % (float(total)/BytesPerGB))
+    values["disk-used"] = ("%.2f" % (float(used)/BytesPerGB))
+    values["disk-free"] = ("%.2f" % (float(free)/BytesPerGB))
+    return values
+    
 
 # Get Raspberry Pi serial number to use as ID
 def get_serial_number():
@@ -69,7 +79,7 @@ def main():
     mqtt_client.loop_start()
     while True:
         try:
-            values = {}
+            values = get_disk_usage()
             values["cpu_temp"] = get_cpu_temp()
             values["serial"] = device_serial_number
             print(values)
