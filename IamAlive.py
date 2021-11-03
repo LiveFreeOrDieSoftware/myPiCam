@@ -1,4 +1,4 @@
-
+import argparse
 import shutil
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
@@ -7,10 +7,10 @@ import json
 from subprocess import PIPE, Popen, check_output
 import time
 
-broker = "10.0.0.5"
-port = 1883
-topic = "IamAlive"
-interval = 5
+DEFAULT_MQTT_BROKER_IP = "10.0.0.5"
+DEFAULT_MQTT_BROKER_PORT = 1883
+DEFAULT_MQTT_TOPIC = "IamAlive"
+DEFAULT_READ_INTERVAL  = 5
 # client_id = f'python-mqtt-{random.randint(0, 1000)}'
 
 
@@ -52,6 +52,31 @@ def get_serial_number():
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Publish enviroplus values over mqtt") 
+    parser.add_argument(
+        "--broker",
+        default=DEFAULT_MQTT_BROKER_IP,
+        type=str,
+        help="mqtt broker IP",
+    )
+    parser.add_argument(
+        "--port",
+        default=DEFAULT_MQTT_BROKER_PORT,
+        type=int,
+        help="mqtt broker port",
+    )
+    parser.add_argument(
+        "--topic", default=DEFAULT_MQTT_TOPIC, type=str, help="mqtt topic"
+    )
+    parser.add_argument(
+        "--interval",
+        default=DEFAULT_READ_INTERVAL,
+        type=int,
+        help="the read interval in seconds",
+    )
+    args = parser.parse_args()
+
     # Raspberry Pi ID
     device_serial_number = get_serial_number()
     device_id = "raspi-" + device_serial_number
@@ -59,10 +84,10 @@ def main():
     print(
         f"""test.py - Reads cpu temp and sends over mqtt.
 
-    broker: {broker}
+    broker: {args.broker}
     client_id: {device_id}
-    port: {port}
-    topic: {topic}
+    port: {args.port}
+    topic: {args.topic}
 
     Press Ctrl+C to exit!
 
@@ -72,7 +97,7 @@ def main():
     mqtt_client = mqtt.Client(client_id=device_id)
     mqtt_client.on_connect = on_connect
     mqtt_client.on_publish = on_publish
-    mqtt_client.connect(broker, port=port)
+    mqtt_client.connect(args.broker, port=args.port)
 
 
     # Main loop to read data, display, and send over mqtt
@@ -83,8 +108,8 @@ def main():
             values["cpu_temp"] = get_cpu_temp()
             values["serial"] = device_serial_number
             print(values)
-            mqtt_client.publish(topic, json.dumps(values))
-            time.sleep(interval)
+            mqtt_client.publish(args.topic, json.dumps(values))
+            time.sleep(args.interval)
         except Exception as e:
             print(e)
 
