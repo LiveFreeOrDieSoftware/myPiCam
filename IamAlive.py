@@ -6,6 +6,7 @@ import json
 
 from subprocess import PIPE, Popen, check_output
 import time
+import socket
 
 DEFAULT_MQTT_BROKER_IP = "10.0.0.5"
 DEFAULT_MQTT_BROKER_PORT = 1883
@@ -42,6 +43,9 @@ def get_disk_usage():
     values["disk-free"] = ("%.2f" % (float(free)/BytesPerGB))
     return values
     
+def get_hostname():
+    hostname = socket.gethostname()
+    return hostname
 
 # Get Raspberry Pi serial number to use as ID
 def get_serial_number():
@@ -78,6 +82,7 @@ def main():
     args = parser.parse_args()
 
     # Raspberry Pi ID
+    hostname = get_hostname()
     device_serial_number = get_serial_number()
     device_id = "raspi-" + device_serial_number
 
@@ -107,6 +112,7 @@ def main():
             values = get_disk_usage()
             values["cpu_temp"] = get_cpu_temp()
             values["serial"] = device_serial_number
+            values["hostname"] = hostname
             print(values)
             mqtt_client.publish(args.topic, json.dumps(values))
             time.sleep(args.interval)
