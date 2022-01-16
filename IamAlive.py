@@ -54,6 +54,10 @@ def get_serial_number():
             if line[0:6] == "Serial":
                 return line.split(":")[1].strip()
 
+def set_id():
+    id = 1
+    return id
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -113,6 +117,7 @@ def main():
             values["cpu_temp"] = get_cpu_temp()
             values["serial"] = device_serial_number
             values["hostname"] = hostname
+            values["id"] = set_id()
             print(values)
             mqtt_client.publish(args.topic, json.dumps(values))
             time.sleep(args.interval)
