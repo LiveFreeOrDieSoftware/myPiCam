@@ -1,0 +1,13 @@
+[Unit]
+Description=IamAlive Service
+After=multi-user.target
+
+[Service]
+Type=idle
+User=pi
+ExecStart=/usr/bin/python3 /home/pi/myPiCam/IamAlive.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
