@@ -3,6 +3,7 @@ import shutil
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
 import json
+import datetime
 
 from subprocess import PIPE, Popen, check_output
 import time
@@ -118,6 +119,7 @@ def main():
             values["serial"] = device_serial_number
             values["hostname"] = hostname
             values["id"] = set_id()
+            values["timestamp"] = datetime.datetime.now().strftime("%Y%m%d %H:%M:%S") 
             print(values)
             mqtt_client.publish(args.topic, json.dumps(values))
             time.sleep(args.interval)
