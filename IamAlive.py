@@ -1,38 +1,55 @@
+#!/usr/bin/python
+"""
+This script publishes an mqtt message periodically.
+It is intended to be the heartbeat for a watchdog service
+which would be an mqtt subscriber.
+
+It currently collects various system data and packs it in
+a Python dictionary that is send as json in the mqtt message.
+"""
+# I don't know what I am doing down below
+# Everything is in functions
+# even stuff that really doesn't need to be?!?!@#&
+
 import argparse
 import shutil
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
 import json
 import datetime
+import logging
 
 from subprocess import PIPE, Popen, check_output
 import time
 import socket
 
+logging.basicConfig(filename='IamAlive.log', format='%(levelname)s:%(message)s', level=logging.INFO)
+
 DEFAULT_MQTT_BROKER_IP = "10.0.0.5"
 DEFAULT_MQTT_BROKER_PORT = 1883
 DEFAULT_MQTT_TOPIC = "IamAlive"
-DEFAULT_READ_INTERVAL  = 5
+DEFAULT_READ_INTERVAL  = 15
+DEFAULT_HOSTID = 0
 # client_id = f'python-mqtt-{random.randint(0, 1000)}'
 
 
 # mqtt callbacks
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print("connected OK")
+        logging.info("OnConnect:  connected OK")
     else:
-        print("Bad connection Returned code=", rc)
+        logging.info("Bad connection Returned code=", rc)
 
 
 def on_publish(client, userdata, mid):
-    print("mid: " + str(mid))
+    logging.debug("mid: " + str(mid))
 
 
 def get_cpu_temp():
     with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
         C = (float(f.read()) / 1000)
         f.close()
-        # print(f'The CPU temp in C is: {C}')
+        logging.debug(f'getCpuTemp:  The CPU temp in C is: {C}')
         return C
 
 def get_disk_usage():
@@ -42,10 +59,14 @@ def get_disk_usage():
     values["disk-total"] = ("%.2f" % (float(total)/BytesPerGB))
     values["disk-used"] = ("%.2f" % (float(used)/BytesPerGB))
     values["disk-free"] = ("%.2f" % (float(free)/BytesPerGB))
+    logging.debug(f'getDiskUsage:  {values}')
     return values
     
+# I could have done this in one line if I had put this
+# as the variable assignment...
 def get_hostname():
     hostname = socket.gethostname()
+    logging.debug(f'getHostname:  The hostname is: {hostname}')
     return hostname
 
 # Get Raspberry Pi serial number to use as ID
@@ -55,14 +76,15 @@ def get_serial_number():
             if line[0:6] == "Serial":
                 return line.split(":")[1].strip()
 
-def set_id():
-    id = 1
-    return id
-
+# Main loop
+# Taking arguements is probably pretty heavy for this script
+# which is really meant to run as a service. Dealing with 
+# hostid is tricky, though, as it is not derived from any
+# system value, and tweaking the script messes with Git
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Publish enviroplus values over mqtt") 
+        description="Publish RPi values over mqtt") 
     parser.add_argument(
         "--broker",
         default=DEFAULT_MQTT_BROKER_IP,
@@ -84,20 +106,28 @@ def main():
         type=int,
         help="the read interval in seconds",
     )
+    parser.add_argument(
+        "--hostid",
+        default=DEFAULT_HOSTID,
+        type=int,
+        help="the ID of the host at the monitor",
+    )
     args = parser.parse_args()
 
     # Raspberry Pi ID
     hostname = get_hostname()
     device_serial_number = get_serial_number()
     device_id = "raspi-" + device_serial_number
+    hostid = int(args.hostid)
 
-    print(
-        f"""test.py - Reads cpu temp and sends over mqtt.
+    logging.info(
+        f"""IamAlive.py - Sends cpu temp and system info over mqtt.
 
     broker: {args.broker}
     client_id: {device_id}
     port: {args.port}
     topic: {args.topic}
+    hostid: {args.hostid}
 
     Press Ctrl+C to exit!
 
@@ -114,13 +144,14 @@ def main():
     mqtt_client.loop_start()
     while True:
         try:
+            logging.debug('Main loop begin.')
             values = get_disk_usage()
             values["cpu_temp"] = get_cpu_temp()
             values["serial"] = device_serial_number
             values["hostname"] = hostname
-            values["id"] = set_id()
             values["timestamp"] = datetime.datetime.now().strftime("%Y%m%d %H:%M:%S") 
-            print(values)
+            values["id"] = args.hostid
+            logging.debug(f'Main loop: {values}')
             mqtt_client.publish(args.topic, json.dumps(values))
             time.sleep(args.interval)
         except Exception as e:

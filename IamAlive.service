@@ -5,6 +5,7 @@ After=multi-user.target
 [Service]
 Type=idle
 User=pi
+# add '--hostid #' below or it will default to 0
 ExecStart=/usr/bin/python3 /home/pi/myPiCam/IamAlive.py
 Restart=always
 
