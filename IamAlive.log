@@ -1,0 +1,58 @@
+INFO:IamAlive.py - Sends cpu temp and system info over mqtt.
+
+    broker: 10.0.0.5
+    client_id: raspi-100000002fb87ef7
+    port: 1883
+    topic: IamAlive
+    hostid: 0
+
+    Press Ctrl+C to exit!
+
+    
+INFO:OnConnect:  connected OK
+DEBUG:getHostname:  The hostname is: cam-11
+INFO:IamAlive.py - Sends cpu temp and system info over mqtt.
+
+    broker: 10.0.0.5
+    client_id: raspi-100000002fb87ef7
+    port: 1883
+    topic: IamAlive
+    hostid: 0
+
+    Press Ctrl+C to exit!
+
+    
+DEBUG:Main loop begin.
+DEBUG:getDiskUsage:  {'disk-total': '58.48', 'disk-used': '11.14', 'disk-free': '44.93'}
+DEBUG:getCpuTemp:  The CPU temp in C is: 26.284
+DEBUG:Main loop: {'disk-total': '58.48', 'disk-used': '11.14', 'disk-free': '44.93', 'cpu_temp': 26.284, 'serial': '100000002fb87ef7', 'hostname': 'cam-11', 'timestamp': '20220220 08:57:50', 'id': 0}
+DEBUG:mid: 1
+INFO:OnConnect:  connected OK
+DEBUG:getHostname:  The hostname is: cam-11
+INFO:IamAlive.py - Sends cpu temp and system info over mqtt.
+
+    broker: 10.0.0.5
+    client_id: raspi-100000002fb87ef7
+    port: 1883
+    topic: IamAlive
+    hostid: 0
+
+    Press Ctrl+C to exit!
+
+    
+DEBUG:Main loop begin.
+DEBUG:getDiskUsage:  {'disk-total': '58.48', 'disk-used': '11.14', 'disk-free': '44.93'}
+DEBUG:getCpuTemp:  The CPU temp in C is: 27.258
+DEBUG:Main loop: {'disk-total': '58.48', 'disk-used': '11.14', 'disk-free': '44.93', 'cpu_temp': 27.258, 'serial': '100000002fb87ef7', 'hostname': 'cam-11', 'timestamp': '20220220 08:58:21', 'id': 0}
+DEBUG:mid: 1
+INFO:OnConnect:  connected OK
+DEBUG:Main loop begin.
+DEBUG:getDiskUsage:  {'disk-total': '58.48', 'disk-used': '11.14', 'disk-free': '44.93'}
+DEBUG:getCpuTemp:  The CPU temp in C is: 24.823
+DEBUG:Main loop: {'disk-total': '58.48', 'disk-used': '11.14', 'disk-free': '44.93', 'cpu_temp': 24.823, 'serial': '100000002fb87ef7', 'hostname': 'cam-11', 'timestamp': '20220220 08:58:36', 'id': 0}
+DEBUG:mid: 2
+DEBUG:Main loop begin.
+DEBUG:getDiskUsage:  {'disk-total': '58.48', 'disk-used': '11.14', 'disk-free': '44.93'}
+DEBUG:getCpuTemp:  The CPU temp in C is: 24.823
+DEBUG:Main loop: {'disk-total': '58.48', 'disk-used': '11.14', 'disk-free': '44.93', 'cpu_temp': 24.823, 'serial': '100000002fb87ef7', 'hostname': 'cam-11', 'timestamp': '20220220 08:58:51', 'id': 0}
+DEBUG:mid: 3

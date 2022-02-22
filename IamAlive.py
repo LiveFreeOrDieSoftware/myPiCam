@@ -23,7 +23,10 @@ from subprocess import PIPE, Popen, check_output
 import time
 import socket
 
-logging.basicConfig(filename='IamAlive.log', format='%(levelname)s:%(message)s', level=logging.INFO)
+# I want to add filename= below, but it won't start from systemd with it
+# need to figure out logfiles, locations, permissions, etc.
+# logging.basicConfig(filename='IamAlive.log', format='%(levelname)s:%(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 DEFAULT_MQTT_BROKER_IP = "10.0.0.5"
 DEFAULT_MQTT_BROKER_PORT = 1883
