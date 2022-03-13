@@ -11,13 +11,21 @@ a strategy
 """
 # the mqtt is from from digi.com
 
+import argparse
 import paho.mqtt.client as mqtt
 import json
 import logging
 from gpiozero import OutputDevice
+from socket import gethostname
 
 # The IR filter is on pin 5
 ir_filter = OutputDevice(5)
+
+DEFAULT_MQTT_BROKER_IP = "10.0.0.5"
+DEFAULT_MQTT_BROKER_PORT = 1883
+DEFAULT_MQTT_TOPIC = "IR_filter"
+DEFAULT_MQTT_ACTION = "toggle"
+
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
@@ -46,11 +54,32 @@ def ir_filter_control(action):
     else:
         logging.warning("IR filter control: action out of bounds")
 
+parser = argparse.ArgumentParser(
+    description = "Receive commands for IR cut-filter."
+    )
+parser.add_argument(
+    "--broker",
+    default=DEFAULT_MQTT_BROKER_IP,
+    type=str,
+    help="mqtt broker port",
+    )
+parser.add_argument(
+        "--port",
+        default=DEFAULT_MQTT_BROKER_PORT,
+        type=int,
+        help="mqtt broker port",
+    )
+parser.add_argument(
+        "--topic",
+        default=DEFAULT_MQTT_TOPIC,
+        type=str,
+        help="mqtt topic"
+    )
+args = parser.parse_args()
 
 
-
-client = mqtt.Client("cam-11")
+client = mqtt.Client(gethostname())
 client.on_connect = on_connect
 client.on_message = on_message
-client.connect('10.0.0.5', 1883)    # hard coding sucks - fix this
+client.connect(DEFAULT_MQTT_BROKER_IP, DEFAULT_MQTT_BROKER_PORT)
 client.loop_forever()
