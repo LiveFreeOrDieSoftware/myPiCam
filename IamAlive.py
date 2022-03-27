@@ -55,6 +55,12 @@ def get_cpu_temp():
         logging.debug(f'getCpuTemp:  The CPU temp in C is: {C}')
         return C
 
+def get_cpu_usage(nproc):
+    loadavg = list(open('/proc/loadavg').read().strip().split())
+    load = float(loadavg[0])/nproc
+    return load
+
+
 def get_disk_usage():
     values = {}
     BytesPerGB = 1024 * 1024 * 1024
@@ -123,6 +129,9 @@ def main():
     device_id = "raspi-" + device_serial_number
     hostid = int(args.hostid)
 
+    nproc = int(check_output('nproc').decode('UTF-8').strip())
+
+
     logging.info(
         f"""IamAlive.py - Sends cpu temp and system info over mqtt.
 
@@ -150,6 +159,7 @@ def main():
             logging.debug('Main loop begin.')
             values = get_disk_usage()
             values["cpu_temp"] = get_cpu_temp()
+            values["cpu_usage"] = get_cpu_usage(nproc)
             values["serial"] = device_serial_number
             values["hostname"] = hostname
             values["timestamp"] = datetime.datetime.now().strftime("%Y%m%d %H:%M:%S") 
