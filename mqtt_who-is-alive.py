@@ -18,7 +18,8 @@ from time import sleep
 # logging.basicConfig(filename='who_is_alive.log', format='%(levelname)s:%(message)s', level=logging.INFO)
 # when working things out I found it easier to NOT log to a file
 # the file is good for debugging the service; it can grow fast
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+# and the path is relative, and pi cannot stat a file where it would drop
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 uh.set_layout(uh.PHAT)
 uh.brightness(0.4)
@@ -64,7 +65,7 @@ def update_hosts(hostid, values):
         else:
             pass
 
-
+# with every message we check every host's health, we need to know when we DO NOT get an update
 def update_health(hostid):
     new_timestamp = datetime.now()
     logging.debug("UpdateHealth:  new_timestamp: %s, hosts_list: %s ", new_timestamp, hosts_list)
@@ -105,6 +106,7 @@ def update_health(hostid):
             logging.info("UpdateHealth: except:  HostID %s:  no data.", i)
 
 
+# after health is set we need to go through the other measurements
 def set_color(hostid):
     logging.debug("SetColor:  HostID:  %s got to set_color", hostid)
     # doing the no_data next will prevent them from being
@@ -116,9 +118,10 @@ def set_color(hostid):
     else:
         set_temp_color(hostid)
         set_disk_color(hostid)
+        set_cpu_usage_color(hostid)
         uh.show()
 
-
+# set the color for the CPU temperature
 def set_temp_color(hostid):
     logging.debug("SetTempColor:  HostID: %s: got HERE!!!", hostid)
     timestamp = hosts_list[hostid]['timestamp']
@@ -130,6 +133,14 @@ def set_temp_color(hostid):
     hue = (70 - temp) / 100
     r, g, b = [int(c * 255) for c in colorsys.hsv_to_rgb(hue, 1.0, 1.0)]
     uh.set_pixel(hostid, 1, r, g, b)
+
+def set_cpu_usage_color(hostid):
+    logging.debug("SetCPUusageColor:  got here:  HostID: %s", hostid)
+    cpu_usage = hosts_list[hostid]['cpu_usage']
+    hue = ((cpu_usage*100)/1.41)+33 / 100
+    r, g, b = [int(c * 255) for c in colorsys.hsv_to_rgb(hue, 1.0, 1.0)]
+    uh.set_pixel(hostid, 3, r, g, b)
+
 
 def set_disk_color(hostid):
     logging.debug("SetDiskColor:  HostID: %s:  arrived!", hostid)
