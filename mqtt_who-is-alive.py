@@ -1,56 +1,55 @@
 #!/usr/bin/python
 
-# mqtt_who-is-alive.py
-# this is an attempt to collect system information from mqtt
-# and display it on a Pimoroni Unicorn pHAT
-
-# the mqtt is from from digi.com
+"""
+Who is Alive
+Listens for mqtt messages from up to 7 hosts
+Records host data in a list
+Displays status on leds on a Unicorn pHAT
+"""
 
 import unicornhat as uh
 import paho.mqtt.client as mqtt
 import json
 import colorsys
 import logging
-# need to learn why other forms of importind datetime did not work
 from datetime import datetime, timedelta
-from time import sleep
+import time, threading
 
-# logging.basicConfig(filename='who_is_alive.log', format='%(levelname)s:%(message)s', level=logging.INFO)
-# when working things out I found it easier to NOT log to a file
-# the file is good for debugging the service; it can grow fast
-# and the path is relative, and pi cannot stat a file where it would drop
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+# logging can also write to file, and call also fill your drive
+# logging.basicConfig(filename='who_is_alive.log', format=%(levelname)s:%(message)s', level=logging.INFO)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+# Need to set some things up for the Pimoroni Autiomation pHAT
 uh.set_layout(uh.PHAT)
 uh.brightness(0.4)
 
-# initialize a list for host data, and making it GLOBAL!
-# There are lots of bad vibes about globals, but it makes things work here.
+# initalize a list for host data, and making it GLOBAL
 global hosts_list
-# there must be a more elegant way to do this
-hosts_list = [{'hostid':'host0'}, {'hostid':'host1'}, {'hostid':'host2'}, {'hostid':'host3'}, {'hostid':'host4'}, {'hostid':'host5'}, {'hostid':'host6'}, {'hostid':'host7'}]
+# when i first wrote this i had a long, typed-out list of dictionaries
+# thanks to the magic of list comprehensions
+hosts_list = [({'hostid': 'host' + str(x)}) for x in range(8)]
+# these logging statements will let you see if the list was created correctly
 logging.info("Hosts_list created")
 for item in hosts_list:
     logging.debug(item)
 
-
 def on_connect(client, userdata, flags, rc):
     logging.info("OnConnect:  Connected with result code {0}".format(str(rc)))
     client.subscribe("IamAlive")
+    threadCount()
 
-# OnMessage passes the IamAlive data to other functions
+# onMessage passes the IamAlive data to other functions
 def on_message(client, userdata, msg):
-    values =  json.loads(msg.payload)
+    values = json.loads(msg.payload)
     hostid = int(values["id"])
     logging.debug("OnMessage:  hostid:  %s, message:  %s", hostid, values)
     update_hosts(hostid, values)
 
-
-# The message is passed to this function which updates the GLOBAL list
+# The message is passed to this function which updates the global hosts_list
 def update_hosts(hostid, values):
-    logging.debug("UpdateHosts:  HostID:  %s,  values:  %s", hostid, values)
+    logging.debug("UpdateHosts:  HostID:  %s, values:  %s", hostid, values)
     # The default in the pub script is hostid 0, which is reserved for ? something
-    if hostid == 0:  # hostid 0 indicates a misconfigured client
+    if hostid == 0:        # hostid 0 indicates a misconfigured client
         for i in range(4):
             uh.set_pixel(0,i,255,0,0)
         uh.show()
@@ -58,42 +57,50 @@ def update_hosts(hostid, values):
         logging.info("UpdateHosts:  Host0 timestamp updated")
     else:
         hosts_list[hostid] = values
-        update_health(hostid)
-        logging.info("UpdateHosts:  HostID:  %s, after update_health about to set_color:  %s", hostid, hosts_list[hostid]['health'])
-        if hosts_list[hostid]['health'] == 'green':
-            set_color(hostid)
-        else:
-            pass
+        # it used to call update_health from hear, but want that on a timer
+        # instead of triggered by messages
 
-# with every message we check every host's health, we need to know when we DO NOT get an update
-def update_health(hostid):
+
+# i need something to do the threading
+# the name doesn't mean anything. it doesnt really count. i just liked the name
+def threadCount():
+    update_health()
+    threading.Timer(1, threadCount).start()
+
+
+"""
+UpdateHealth does compares a current timestamp with the data for each host.
+This compares the last message timestamp with a delta of the current.
+The comparison tests old + delta < new.
+"""
+def update_health():
     new_timestamp = datetime.now()
-    logging.debug("UpdateHealth:  new_timestamp: %s, hosts_list: %s ", new_timestamp, hosts_list)
+    logging.debug("UpdateHealth:  newtimestamp: %s, hosts_list: %s ", new_timestamp, hosts_list)
     for i in range(8):
         try:
             old_timestamp = datetime.strptime((hosts_list[i]['timestamp']), "%Y%m%d %H:%M:%S")
-            logging.info("UpdateHealth:  HostID %s  old_timestamp %s", i, old_timestamp)
+            logging.debug("UpdateHealth:  HostID %s  old_timestamp %s", i, old_timestamp)
 
-            # Is this HostID 0?  A misconfigured client
+            # Is this HostID 0? a misconfigured client
             if i == 0:
-                logging.info("Made it to the host0 loop in updatehealth!!!!!!$$$$$####")
+                logging.debug("Made it to the hosts0 loop in UpdateHealth!!!!!!!!")
                 if (old_timestamp + timedelta(seconds = 30)) < new_timestamp:
                     for i in range(4):
                         uh.set_pixel(0,i,0,0,0)
                     uh.show()
                     hosts_list[0] = {"id":"0","health":"no data"}
-                    logging.info("UpdateHealth: Host0 RESET") 
+                    logging.debug("UpdateHealth:  Host0 RESET")
             
             # Over 5 minutes health is RED
             elif (old_timestamp + timedelta(minutes = 5)) < new_timestamp:
-                logging.info("UpdateHealth:  Health of %s is RED!", i)
+                logging.debug("UpdateHealth:  Health of %s is RED!", i)
                 hosts_list[i]["health"] = 'red'
                 uh.set_pixel(i,0,255,0,0)
 
             # Over 1 minute health is YELLOW
             elif (old_timestamp + timedelta(minutes = 1)) < new_timestamp:
-                logging.info("UpdateHealth:  Health of %s is YELLOW!", i)
-                hosts_list[i]["health"]  = 'yellow'
+                logging.debug("UpdateHealth:  Health of %s is YELLOW.", i)
+                hosts_list[i]["health"] = 'yellow'
                 uh.set_pixel(i,0,255,255,0)
 
             # else health is GREEN
@@ -103,23 +110,34 @@ def update_health(hostid):
                 uh.set_pixel(i,0,0,255,0)
 
         except:
-            logging.info("UpdateHealth: except:  HostID %s:  no data.", i)
+            if i == 0:
+                # host0 is expected to have no data
+                logging.debug("UpdateHealth:  except:  HostID %s:  no data.", i)
+            else:
+                # the other hosts are expected to have data
+                logging.info("UpdateHealth:  except:  HostID %s: no data.", i)
 
+        # trying to call set_color from here
+        logging.debug("UpdateHealth:  trying to call set_color for %s", i)
+        set_color(i)
 
-# after health is set we need to go through the other measurements
+# after health is set we need to go throug the other measurements
 def set_color(hostid):
     logging.debug("SetColor:  HostID:  %s got to set_color", hostid)
     # doing the no_data next will prevent them from being
-    # sent to functions that look for data that won't be there
-    if hosts_list[hostid]['health'] == 'no_data':
-        for i in range(4):
-            uh.set_pixel(hostid, i, 0, 0, 0)
+    # sent to functions that loof for data that won't be there
+    try:
+        if hosts_list[hostid]['health'] == 'no_data':
+            for i in range(4):
+                uh.set_pixel(hostid, i, 0, 0, 0)
+                uh.show()
+        else:
+            set_temp_color(hostid)
+            set_disk_color(hostid)
+            set_cpu_usage_color(hostid)
             uh.show()
-    else:
-        set_temp_color(hostid)
-        set_disk_color(hostid)
-        set_cpu_usage_color(hostid)
-        uh.show()
+    except:
+        pass
 
 # set the color for the CPU temperature
 def set_temp_color(hostid):
@@ -141,12 +159,11 @@ def set_cpu_usage_color(hostid):
     r, g, b = [int(c * 255) for c in colorsys.hsv_to_rgb(hue, 1.0, 1.0)]
     uh.set_pixel(hostid, 3, r, g, b)
 
-
 def set_disk_color(hostid):
     logging.debug("SetDiskColor:  HostID: %s:  arrived!", hostid)
     disk_percentage = int((float(hosts_list[hostid]["disk-used"]) / float(hosts_list[hostid]["disk-total"])) * 100)
     logging.debug("SetDiskColor:  HostID: %s:  disk_percentage: %s", hostid, disk_percentage)
-    if disk_percentage >90:
+    if disk_percentage > 90:
         logging.debug("SetDiskColor:  HostID: %s:  disk health is RED", hostid)
         uh.set_pixel(hostid, 2, 255, 0, 0)
     elif disk_percentage > 75:
@@ -155,7 +172,6 @@ def set_disk_color(hostid):
     else:
         logging.debug("SetDiskColor:  HostID: %s:  disk health is GREEN", hostid)
         uh.set_pixel(hostid, 2, 0, 255, 0)
-
 
 client = mqtt.Client("mqtt_iamalive_teston-BB")
 client.on_connect = on_connect
