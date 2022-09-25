@@ -5,8 +5,15 @@ Who is Alive
 Listens for mqtt messages from up to 7 hosts
 Records host data in a list
 Displays status on leds on a Unicorn pHAT
+Hosts are organized in to columns by id
+Rows represent various system values
 """
 
+"""
+Imports:
+    unicornhat is the LED board specific library
+    colorsys provides a color-wheel for easier mapping of data
+"""
 import unicornhat as uh
 import paho.mqtt.client as mqtt
 import json
@@ -15,13 +22,15 @@ import logging
 from datetime import datetime, timedelta
 import time, threading
 
-# logging can also write to file, and call also fill your drive
+# logging can also write to file, and can also fill your drive
 # logging.basicConfig(filename='who_is_alive.log', format=%(levelname)s:%(message)s', level=logging.INFO)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 # Need to set some things up for the Pimoroni Autiomation pHAT
+led_brightness = 0.4
 uh.set_layout(uh.PHAT)
-uh.brightness(0.4)
+uh.brightness(brightness)
+logging.info("Unicorn pHAT brightness set to: %s", led_brightness)
 
 # initalize a list for host data, and making it GLOBAL
 global hosts_list
@@ -38,14 +47,18 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("IamAlive")
     threadCount()
 
-# onMessage passes the IamAlive data to other functions
+# onMessage
+# unpacks the message
+# sets the hostid
+# and calls update hosts
 def on_message(client, userdata, msg):
     values = json.loads(msg.payload)
     hostid = int(values["id"])
     logging.debug("OnMessage:  hostid:  %s, message:  %s", hostid, values)
     update_hosts(hostid, values)
 
-# The message is passed to this function which updates the global hosts_list
+# updateHosts
+# updates the global hosts_list
 def update_hosts(hostid, values):
     logging.debug("UpdateHosts:  HostID:  %s, values:  %s", hostid, values)
     # The default in the pub script is hostid 0, which is reserved for ? something
@@ -57,12 +70,14 @@ def update_hosts(hostid, values):
         logging.info("UpdateHosts:  Host0 timestamp updated")
     else:
         hosts_list[hostid] = values
-        # it used to call update_health from hear, but want that on a timer
+        # it used to call update_health from here, but that needs to be on a timer
         # instead of triggered by messages
 
 
-# i need something to do the threading
+# threadCount
 # the name doesn't mean anything. it doesnt really count. i just liked the name
+# Messages update the list as they are received, but the LEDs are updated
+# based on timer and using threading
 def threadCount():
     update_health()
     threading.Timer(1, threadCount).start()
@@ -132,10 +147,11 @@ def set_color(hostid):
                 uh.set_pixel(hostid, i, 0, 0, 0)
                 uh.show()
         else:
-            set_temp_color(hostid)
-            set_disk_color(hostid)
-            set_cpu_usage_color(hostid)
-            uh.show()
+            # LEDs do not update when set:
+            set_temp_color(hostid) # set cpu temp color
+            set_disk_color(hostid) # set disk usage color
+            set_cpu_usage_color(hostid) # set bpu usage color
+            uh.show()  # updates all LEDs
     except:
         pass
 
@@ -173,6 +189,8 @@ def set_disk_color(hostid):
         logging.debug("SetDiskColor:  HostID: %s:  disk health is GREEN", hostid)
         uh.set_pixel(hostid, 2, 0, 255, 0)
 
+# these lines are from the original mqtt code
+# that I copied
 client = mqtt.Client("mqtt_iamalive_teston-BB")
 client.on_connect = on_connect
 client.on_message = on_message
